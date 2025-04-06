@@ -2,32 +2,34 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# Health check route
-@app.route('/', methods=['GET'])
-def home():
-    return '✅ Webhook is running', 200
-
-# Webhook listener
-@app.route('/webhook', methods=['POST'])
+@app.route("/webhook", methods=["POST"])
 def webhook():
+    data = request.get_json()
+
+    if not data:
+        return "No data", 400
+
+    print("✅ Webhook received")
+
+    # Extract info
     try:
-        data = request.get_json()
-        print("📬 Received Webhook Data:", data)
+        event = data.get("event")
+        res_data = data.get("data", {})
+        checkin = res_data.get("checkInDate")
+        checkout = res_data.get("checkOutDate")
+        address = res_data.get("listing", {}).get("address", {}).get("street")
 
-        # Optional: Extract important fields
-        event_type = data.get("eventType")
-        reservation = data.get("payload", {})
-        guest_name = reservation.get("guest", {}).get("fullName")
-        check_in = reservation.get("checkInDate")
-        check_out = reservation.get("checkOutDate")
+        print(f"Event: {event}")
+        print(f"Check-in: {checkin}")
+        print(f"Check-out: {checkout}")
+        print(f"Address: {address}")
 
-        print(f"Event: {event_type}, Guest: {guest_name}, Check-in: {check_in}, Check-out: {check_out}")
-
-        return jsonify({"status": "success"}), 200
+        # ✅ You’ll pass this to Selenium later
 
     except Exception as e:
-        print("❌ Error handling webhook:", str(e))
-        return jsonify({"error": "internal server error"}), 500
+        print(f"❌ Error extracting data: {e}")
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5050)
+    return jsonify({"status": "received"}), 200
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5050)
